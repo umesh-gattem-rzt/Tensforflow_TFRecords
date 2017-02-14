@@ -4,23 +4,26 @@ from TFRecords import tfrecord_utils
 import os
 import time
 
-utils = tfrecord_utils.Generator()
+util = tfrecord_utils.TFRecords()
 metadata = OrderedDict(float_list=dict(output=3, input=4))
 file_path = 'irisdata.csv'
-train_data, no_of_records = utils.read_data(file_path=file_path, delimiter=',', output_label_start_index=-3)
+train_data, no_of_records = util.read_data_from_csv(filepath=file_path, delimiter=',',
+                                                    output_label_start_index=-3)
 tfrecords_path = '/Users/umesh/PycharmProjects/TensorFlow_Python/TFRecords/tfrecords/'
-utils.convert_to_tfrecord(tfrecords_directory=tfrecords_path,
-                          record_name=os.path.split(file_path)[1].replace('.csv', ''), columns_metadata=metadata,
-                          data_set=train_data)
-batch_size = 30
+util.convert_to_tfrecord(tfrecords_directory=tfrecords_path,
+                         record_name=os.path.split(file_path)[1].replace('.csv', ''),
+                         columns_metadata=metadata,
+                         data_set=train_data)
+batch_size = 150
 batch_display_step = 1
-batch_data = utils.setup_data_read(file_path=tfrecords_path, batch_size=batch_size, shuffle_batch_threads=4,
-                                   capacity=10, min_after_deque=0, allow_small_final_batch=True, num_of_epochs=None,
-                                   metadata=metadata)
+batch_data = util.read_data_from_tfrecord(file_path=tfrecords_path, batch_size=batch_size, shuffle_batch_threads=4,
+                                          capacity=10, min_after_dequeue=0, allow_small_final_batch=True,
+                                          num_of_epochs=None,
+                                          metadata=metadata)
 
 no_of_inputs = len(train_data)
 learning_rate = 0.01
-epochs = 500
+epochs = 1000
 display_step = 100
 logs_path = 'ffn_for_iris_data'
 
@@ -75,7 +78,8 @@ with tf.Session() as sess:
     for each_epoch in range(epochs):
         epoch_cost, epoch_acc = [], []
         for i in range(int(no_of_records / batch_size)):
-            data = utils.next_batch(sess, batch_data, metadata)
+            # print("entered")
+            data = util.next_batch(sess, batch_data, metadata)
             training_cost, optimizer, summary, acc = sess.run([cost, train_step, merged_summary_op, accuracy],
                                                               feed_dict={input_data: data['input'],
                                                                          output_data: data['output']})
@@ -88,10 +92,7 @@ with tf.Session() as sess:
             print("Epoch", each_epoch, ":", "cost is :", sum(epoch_cost) / len(epoch_cost), "Accuracy:",
                   sum(epoch_acc) / len(epoch_acc))
     print(time.time() - start_time)
-    # exit()
     coord.request_stop()
     coord.join(threads)
     sess.close()
 
-    # acc = sess.run(accuracy, feed_dict={input_data: test_data_input, output_data: test_data_output})
-    # print("Accuracy is :", acc)
