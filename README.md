@@ -155,7 +155,11 @@ coord.request_stop()
 coord.join(threads)
 ```
 
+## References
 
+1. [Placeholders, Protobufs & Queues](https://indico.io/blog/tensorflow-data-inputs-part1-placeholders-protobufs-queues/)<br>
+2. [Tensorflow Input pipeline](https://www.tensorflow.org/versions/r0.10/api_docs/python/io_ops/input_pipeline)
+3. [Threading and Queues](https://www.tensorflow.org/how_tos/threading_and_queues/)
 
 
 
