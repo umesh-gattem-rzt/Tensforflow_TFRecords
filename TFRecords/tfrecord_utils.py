@@ -5,7 +5,6 @@ from collections import OrderedDict
 
 
 class TFRecords:
-
     """ All possible types of feature data which can be converted to tfrecord """
 
     @staticmethod
@@ -65,12 +64,13 @@ class TFRecords:
             return tf.FixedLenFeature([], tf.string)
 
     @staticmethod
-    def read_data_from_csv(filepath, delimiter=',', output_label_start_index=-1):
+    def read_data_from_csv(filepath, delimiter=',', output_label_start_index=-1, train_data_columns=None):
         """
         Read the raw data from the file_path given and return the data needed to create tfrecords
         :param filepath: file path to read raw data
         :param delimiter: delimiter for column values
         :param output_label_start_index: index where output label starts
+        :param train_data_columns : columns need to be in train_data
         :return: data and no of records
         """
         total_samples = 0
@@ -80,7 +80,8 @@ class TFRecords:
             for line in reader:
                 total_samples += 1
                 line_data = [float(val) for val in line]
-                data = Data(line_data[:output_label_start_index], line_data[output_label_start_index:])
+                data = Data([line_data[i] for i in train_data_columns] if train_data_columns
+                            else line_data[:output_label_start_index], line_data[output_label_start_index:])
                 data_set.append(data)
         return data_set, total_samples
 

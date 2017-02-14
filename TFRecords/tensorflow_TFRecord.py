@@ -5,10 +5,10 @@ import os
 import time
 
 util = tfrecord_utils.TFRecords()
-metadata = OrderedDict(float_list=dict(output=3, input=4))
+metadata = OrderedDict(float_list=dict(output=3, input=3))
 file_path = 'irisdata.csv'
 train_data, no_of_records = util.read_data_from_csv(filepath=file_path, delimiter=',',
-                                                    output_label_start_index=-3)
+                                                    output_label_start_index=-3, train_data_columns=[0, 2, 3])
 tfrecords_path = '/Users/umesh/PycharmProjects/TensorFlow_Python/TFRecords/tfrecords/'
 util.convert_to_tfrecord(tfrecords_directory=tfrecords_path,
                          record_name=os.path.split(file_path)[1].replace('.csv', ''),
@@ -31,7 +31,7 @@ input_data = tf.placeholder("float", name='Input')
 output_data = tf.placeholder("float", name='Output')
 
 weights = {
-    'weight1': tf.Variable(tf.random_normal([4, 7], dtype=tf.float32), name='Weight1'),
+    'weight1': tf.Variable(tf.random_normal([3, 7], dtype=tf.float32), name='Weight1'),
     'weight2': tf.Variable(tf.random_normal([7, 6], dtype=tf.float32), name='Weight2'),
     'weight3': tf.Variable(tf.random_normal([6, 3], dtype=tf.float32), name='Weight3'),
 }
@@ -95,4 +95,3 @@ with tf.Session() as sess:
     coord.request_stop()
     coord.join(threads)
     sess.close()
-
