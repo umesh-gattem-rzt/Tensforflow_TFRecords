@@ -17,17 +17,25 @@ tfrecords_path = '/Users/umesh/PycharmProjects/Tensorflow_TFRecords/TFRecords/tf
 epochs = 10
 batch_size = 250
 utils = TFRecords()
+
+'''
+This function will be used when we already have an TFRecord file and we can use it directly
+'''
 data = utils.setup_data_read(tfrecords_path=tfrecords_path + 'simple_cnn_data.tfrecords', batch_size=batch_size,
                              metadata=metadata,
                              num_of_epochs=epochs,
                              shuffle_batch_threads=1, capacity=2,
                              min_after_deque=0,
                              allow_small_final_batch=True)
-#
+'''
+This function will be useful when you have csv file and
+you want to convert csv file to TFRecord and use it
+'''
 #
 # data = utils.convert_and_read_data_from_tfrecords(
-#     "/Users/umesh/PycharmProjects/Tensorflow_TFRecords/datasets/simple_cnn_data.csv", delimiter=';', metadata=metadata,
-#     output_label=10,label_vector=True,
+#     "/Users/umesh/PycharmProjects/Tensorflow_TFRecords/datasets/simple_cnn_data.csv",
+#     delimiter=';', metadata=metadata,
+#     output_label=10, label_vector=True,
 #     tfrecords_path=tfrecords_path, batch_size=batch_size,
 #     num_of_epochs=epochs,
 #     shuffle_batch_threads=1, capacity=2,
@@ -85,30 +93,6 @@ accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
 init = tf.local_variables_initializer()
 global_variables = tf.global_variables_initializer()
-
-# with tf.Session() as sess:
-#     sess.run(init)
-#     step, batch = 0, 0
-#     for i in range(epoch):
-#         while step < len(train_data) / batch_size:
-#             batch_x, batch_y = train_data[batch: batch + batch_size], train_label[batch:batch + batch_size]
-#             batch += batch_size
-#             sess.run(optimizer, feed_dict={x: batch_x, y: batch_y,
-#                                            keep_prob: 0.75})
-#             if epoch % display_step == 0:
-#                 loss, acc = sess.run([cost, accuracy], feed_dict={x: batch_x,
-#                                                                   y: batch_y,
-#                                                                   keep_prob: 1.})
-#                 print("Iter " + str(step * batch_size) + ", Minibatch Loss= " + \
-#                       "{:.6f}".format(loss) + ", Training Accuracy= " + \
-#                       "{:.5f}".format(acc))
-#             step += 1
-#     print("Optimization Finished!")
-#     print("Testing Accuracy:",
-#           sess.run(accuracy, feed_dict={x: train_data[:256],
-#                                         y: train_label[:256],
-#                                         keep_prob: 1.}))
-
 
 with tf.Session() as sess:
     sess.run(init)

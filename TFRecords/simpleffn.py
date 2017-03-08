@@ -2,11 +2,15 @@ import tensorflow as tf
 from collections import OrderedDict
 from TFRecords.rztutils import TFRecords
 
-metadata = OrderedDict(float_list=dict(output=3, input=4))
+metadata = OrderedDict(string=dict(id=1), float_list=dict(output=3, input=4))
 tfrecords_path = '/Users/umesh/PycharmProjects/Tensorflow_TFRecords/TFRecords/irisdata_TFRecords/'
-epochs = 4
-batch_size = 150
+epochs = 100
+batch_size = 15
 utils = TFRecords()
+'''
+This function will be useful when you have csv file and
+you want to convert csv file to TFRecord and use it
+'''
 data = utils.convert_and_read_data_from_tfrecords(
     "/Users/umesh/PycharmProjects/Tensorflow_TFRecords/datasets/irisdata.csv", delimiter=',', metadata=metadata,
     output_label=-3,
@@ -16,6 +20,10 @@ data = utils.convert_and_read_data_from_tfrecords(
     min_after_deque=0,
     allow_small_final_batch=True)
 
+
+'''
+This function will be used when we already have an TFRecord file and we can use it directly
+'''
 # data = utils.setup_data_read(tfrecords_path + 'irisdata.tfrecords', batch_size=batch_size,
 #                              num_of_epochs=epochs, metadata=metadata)
 

@@ -17,7 +17,9 @@ import numpy as np
 import pandas as pd
 from pyhdfs import HdfsClient
 from typing import Union
-import csv, os, glob
+import csv
+import os
+import glob
 import tensorflow as tf
 from collections import OrderedDict
 
@@ -94,6 +96,8 @@ class TFRecords(object):
         :param output_label: Its a index from where the output label starts.
         :param tfrecords_path: Path where TFRecord should be stored/
         :param batch_size: Batch size for training data.
+        :param header: This specifies whether header is present in CSV or not
+        :param index_col: The first column will be act as index_col if is true
         :param num_of_epochs: No of epochs for training.
         :param label_vector: True if output_label is vector.
         :param shuffle_batch_threads: no of threads for queue.
@@ -107,17 +111,16 @@ class TFRecords(object):
             reader = csv.reader(f, delimiter=delimiter)
             next(reader) if header else reader
             for line in reader:
+                id = line[1] if index_col else total_samples
                 total_samples += 1
                 line = line[1:] if index_col else line
-                print(line)
-                exit()
                 if label_vector:
                     output = literal_eval(line[-1])
                     input = [float(val) for val in line[:-1]]
-                    line_data = Data(input, output)
+                    line_data = Data(str(id), input, output)
                 else:
                     line = [float(val) for val in line]
-                    line_data = Data(line[:output_label], line[output_label:])
+                    line_data = Data(str(id), line[:output_label], line[output_label:])
                 data_set.append(line_data)
         record_file_path = self.convert_to_tfrecord(tfrecords_directory=tfrecords_path,
                                                     record_name=os.path.split(filepath)[1].replace('.csv', ''),
@@ -351,6 +354,7 @@ class Data:
     Data object for creating the tfrecords
     """
 
-    def __init__(self, input, output):
+    def __init__(self, id, input, output):
+        self.id = id
         self.input = input
         self.output = output
