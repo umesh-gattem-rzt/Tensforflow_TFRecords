@@ -3,25 +3,31 @@ from collections import OrderedDict
 from TFRecords import tfrecord_utils
 import os
 import time
+from TFRecords import tfrecord_utils, rztutils
 
 util = tfrecord_utils.TFRecords()
-metadata = OrderedDict(float_list=dict(output=3, input=3))
+metadata = OrderedDict(float_list=OrderedDict(data=7))
 file_path = 'irisdata.csv'
-train_data, no_of_records = util.read_data_from_csv(filepath=file_path, delimiter=',',
-                                                    output_label_start_index=-3, train_data_columns=[0, 2, 3])
-tfrecords_path = '/Users/umesh/PycharmProjects/TensorFlow_Python/TFRecords/tfrecords/'
+data, no_of_records = util.read_data_from_csv(filepath=file_path, delimiter=',')
+
+tfrecords_path = '/Users/umesh/PycharmProjects/Tensorflow_TFRecords/TFRecords/tfrecords/'
 util.convert_to_tfrecord(tfrecords_directory=tfrecords_path,
                          record_name=os.path.split(file_path)[1].replace('.csv', ''),
                          columns_metadata=metadata,
-                         data_set=train_data)
-batch_size = 150
-batch_display_step = 1
-batch_data = util.read_data_from_tfrecord(file_path=tfrecords_path, batch_size=batch_size, shuffle_batch_threads=4,
-                                          capacity=10, min_after_dequeue=0, allow_small_final_batch=True,
-                                          num_of_epochs=None,
-                                          metadata=metadata)
+                         data_set=data)
 
-no_of_inputs = len(train_data)
+training_data = util.read_data_from_tfrecord(file_path=tfrecords_path + 'irisdata.tfrecords', metadata=metadata,
+                                             batch_size=30, shuffle_batch_threads=5, capacity=12,
+                                             min_after_dequeue=0,
+                                             allow_small_final_batch=True, num_of_epochs=1)
+
+data_list = util.change_tensor_data_to_list(training_data)
+train_data, train_label = rztutils.read_csv(data=data_list,
+                                            split_ratio=[100, 0, 0],
+                                            delimiter=";",
+                                            normalize=False,
+                                            randomize=True,
+                                            output_label=[4, 5, 6])
 learning_rate = 0.01
 epochs = 1000
 display_step = 100
@@ -31,7 +37,7 @@ input_data = tf.placeholder("float", name='Input')
 output_data = tf.placeholder("float", name='Output')
 
 weights = {
-    'weight1': tf.Variable(tf.random_normal([3, 7], dtype=tf.float32), name='Weight1'),
+    'weight1': tf.Variable(tf.random_normal([4, 7], dtype=tf.float32), name='Weight1'),
     'weight2': tf.Variable(tf.random_normal([7, 6], dtype=tf.float32), name='Weight2'),
     'weight3': tf.Variable(tf.random_normal([6, 3], dtype=tf.float32), name='Weight3'),
 }
@@ -76,21 +82,11 @@ with tf.Session() as sess:
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
     start_time = time.time()
     for each_epoch in range(epochs):
-        epoch_cost, epoch_acc = [], []
-        for i in range(int(no_of_records / batch_size)):
-            # print("entered")
-            data = util.next_batch(sess, batch_data, metadata)
-            training_cost, optimizer, summary, acc = sess.run([cost, train_step, merged_summary_op, accuracy],
-                                                              feed_dict={input_data: data['input'],
-                                                                         output_data: data['output']})
-            epoch_acc.append(acc)
-            # if i % batch_display_step == 0:
-            #     print("\t\tBatch: ", i, "cost: ", training_cost, "Accuracy: ", acc)
-            epoch_cost.append(training_cost)
-            summary_writer.add_summary(summary, each_epoch)
+        training_cost, optimizer, summary, acc = sess.run([cost, train_step, merged_summary_op, accuracy],
+                                                          feed_dict={input_data: train_data,
+                                                                     output_data: train_label})
         if each_epoch % display_step == 0:
-            print("Epoch", each_epoch, ":", "cost is :", sum(epoch_cost) / len(epoch_cost), "Accuracy:",
-                  sum(epoch_acc) / len(epoch_acc))
+            print("Epoch", each_epoch, "Cost", training_cost, "Accuracy:", acc)
     print(time.time() - start_time)
     coord.request_stop()
     coord.join(threads)

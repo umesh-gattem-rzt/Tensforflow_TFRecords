@@ -4,7 +4,7 @@ import os, glob
 from collections import OrderedDict
 
 
-class TFRecords:
+class TFRecords(object):
     """ All possible types of feature data which can be converted to tfrecord """
 
     @staticmethod
@@ -64,13 +64,11 @@ class TFRecords:
             return tf.FixedLenFeature([], tf.string)
 
     @staticmethod
-    def read_data_from_csv(filepath, delimiter=',', output_label_start_index=-1, train_data_columns=None):
+    def read_data_from_csv(filepath, delimiter=','):
         """
         Read the raw data from the file_path given and return the data needed to create tfrecords
         :param filepath: file path to read raw data
         :param delimiter: delimiter for column values
-        :param output_label_start_index: index where output label starts
-        :param train_data_columns : columns need to be in train_data
         :return: data and no of records
         """
         total_samples = 0
@@ -80,9 +78,7 @@ class TFRecords:
             for line in reader:
                 total_samples += 1
                 line_data = [float(val) for val in line]
-                data = Data([line_data[i] for i in train_data_columns] if train_data_columns
-                            else line_data[:output_label_start_index], line_data[output_label_start_index:])
-                data_set.append(data)
+                data_set.append(line_data)
         return data_set, total_samples
 
     def convert_to_tfrecord(self, tfrecords_directory, record_name, columns_metadata, data_set):
@@ -95,54 +91,31 @@ class TFRecords:
         :return:
         """
         record_filepath = os.path.join(tfrecords_directory, record_name + '.tfrecords')
-        writer = tf.python_io.TFRecordWriter(record_filepath)
-        for data_ in data_set:
-            features_ = OrderedDict()
-            for type_ in columns_metadata:
-                for each_key in columns_metadata[type_]:
-                    val = getattr(data_, each_key)
-                    if type_ == 'string':
-                        val = str.encode(val)
-                    features_[each_key] = self.choose_write_feature_func(type_)(val)
-            example = tf.train.Example(features=tf.train.Features(feature=features_))
-            writer.write(example.SerializeToString())
-        writer.close()
-
-    def read_data_from_tfrecord(self, file_path, batch_size, shuffle_batch_threads, capacity, min_after_dequeue,
-                                allow_small_final_batch, num_of_epochs, metadata):
-        """
-        Read the data from the TFRecords
-        :param file_path:
-        :param batch_size:
-        :param shuffle_batch_threads:
-        :param capacity:
-        :param min_after_dequeue:
-        :param allow_small_final_batch:
-        :param no_of_epochs:
-        :param metadata:
-        :return:
-        """
-        features, key_list_ = self.read_and_decode_single_example(file_path, num_of_epochs, metadata)
-        fetch_features = [features[key] for key in key_list_]
-        features_batch = tf.train.shuffle_batch(
-            fetch_features,
-            batch_size=batch_size,
-            num_threads=shuffle_batch_threads,
-            capacity=capacity,
-            min_after_dequeue=min_after_dequeue,
-            allow_smaller_final_batch=allow_small_final_batch,
-            name='BatchOp')
-        return features_batch
+        if os.path.exists(record_filepath):
+            return
+        else:
+            writer = tf.python_io.TFRecordWriter(record_filepath)
+            for data_ in data_set:
+                features_ = OrderedDict()
+                for type_ in columns_metadata:
+                    for each_key in columns_metadata[type_]:
+                        val = data_
+                        if type_ == 'string':
+                            val = str.encode(val)
+                        features_[each_key] = self.choose_write_feature_func(type_)(val)
+                example = tf.train.Example(features=tf.train.Features(feature=features_))
+                writer.write(example.SerializeToString())
+            writer.close()
 
     def read_and_decode_single_example(self, file_path, num_of_epochs, columns_metadata):
         """
-
+        Read the TFRecord data into Tensor
         :param file_path:
         :param num_of_epochs:
         :param columns_metadata:
         :return:
         """
-        filenames = glob.glob(file_path + os.sep + '*.tfrecords')
+        filenames = glob.glob(file_path)
         filename_queue = tf.train.string_input_producer(filenames, num_epochs=num_of_epochs)
         reader = tf.TFRecordReader()
         _, serialized_example = reader.read(filename_queue)
@@ -153,6 +126,36 @@ class TFRecords:
                     each_key])
         features = tf.parse_single_example(serialized_example, features=features_)
         return features, list(features_.keys())
+
+    def read_data_from_tfrecord(self, file_path, metadata, batch_size=None, shuffle_batch_threads=4, capacity=10,
+                                min_after_dequeue=0,
+                                allow_small_final_batch=True, num_of_epochs=None):
+        """
+        Read the data from the TFRecords
+        :param file_path:
+        :param batch_size:
+        :param shuffle_batch_threads:
+        :param capacity:
+        :param min_after_dequeue:
+        :param allow_small_final_batch:
+        :param num_of_epochs:
+        :param metadata:
+        :return:
+        """
+        features, key_list_ = self.read_and_decode_single_example(file_path, num_of_epochs, metadata)
+        fetch_features = [features[key] for key in key_list_]
+        if batch_size:
+            features_batch = tf.train.shuffle_batch(
+                fetch_features,
+                batch_size=batch_size,
+                num_threads=shuffle_batch_threads,
+                capacity=capacity,
+                min_after_dequeue=min_after_dequeue,
+                allow_smaller_final_batch=allow_small_final_batch,
+                name='BatchOp')
+            return features_batch
+        else:
+            return fetch_features
 
     def next_batch(self, session, features_batch, metadata):
         """
@@ -171,12 +174,18 @@ class TFRecords:
                 count += 1
         return processed_data
 
-
-class Data:
-    """
-    Data object for creating the tfrecords
-    """
-
-    def __init__(self, input, output):
-        self.input = input
-        self.output = output
+    @staticmethod
+    def change_tensor_data_to_list(data):
+        """
+        Function to change the type of TFRecord data from Tensor to list
+        :param data:
+        :return:
+        """
+        with tf.Session() as sess:
+            coord = tf.train.Coordinator()
+            threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+            data_list = sess.run(data)
+            coord.request_stop()
+            coord.join(threads)
+            sess.close()
+        return data_list
