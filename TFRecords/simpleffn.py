@@ -1,10 +1,13 @@
+"""
+
+"""
 import tensorflow as tf
 from collections import OrderedDict
 from TFRecords.rztutils import TFRecords
 
 metadata = OrderedDict(string=dict(id=1), float_list=dict(output=3, input=4))
 tfrecords_path = '/Users/umesh/PycharmProjects/Tensorflow_TFRecords/TFRecords/irisdata_TFRecords/'
-epochs = 100
+epochs = 1
 batch_size = 15
 utils = TFRecords()
 '''
@@ -15,11 +18,10 @@ data = utils.convert_and_read_data_from_tfrecords(
     "/Users/umesh/PycharmProjects/Tensorflow_TFRecords/datasets/irisdata.csv", delimiter=',', metadata=metadata,
     output_label=-3,
     tfrecords_path=tfrecords_path, header=True, batch_size=batch_size,
-    num_of_epochs=epochs, index_col=False,
+    num_of_epochs=epochs, index_col=True,
     shuffle_batch_threads=1, capacity=2,
     min_after_deque=0,
     allow_small_final_batch=True)
-
 
 '''
 This function will be used when we already have an TFRecord file and we can use it directly
@@ -85,12 +87,14 @@ with tf.Session() as sess:
         while not coord.should_stop():
             i += 1
             data_ = utils.next_batch(sess, data, metadata)
+            print(data_['input'][0])
+            exit()
             training_cost, optimizer, summary, acc = sess.run([cost, train_step, merged_summary_op, accuracy],
                                                               feed_dict={input_data: data_['input'],
                                                                          output_data: data_['output']})
             print("Epoch", i, "Cost", training_cost, "Accuracy:", acc)
     except tf.errors.OutOfRangeError:
-        print("Queue is empty")
+        pass
     finally:
         coord.request_stop()
         coord.join(threads)

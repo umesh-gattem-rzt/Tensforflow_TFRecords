@@ -140,7 +140,7 @@ class TFRecords(object):
         :param data_set: type > list of objects, this is the dataset to be converted into tfrecords
         :return:
         """
-        record_filepath = os.path.join(self, tfrecords_directory, record_name + '.tfrecords')
+        record_filepath = os.path.join(tfrecords_directory, record_name + '.tfrecords')
         writer = tf.python_io.TFRecordWriter(record_filepath)
         for data_ in data_set:
             features_ = OrderedDict()
